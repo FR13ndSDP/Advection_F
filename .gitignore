@@ -4,6 +4,7 @@
 *.class
 *.dll
 *.exe
+*.ex
 *.o
 *.so
 *.mod
@@ -29,6 +30,7 @@
 # Building generated files #
 ######################
 Source/modfiles/**
+Exec/tmp_build_dir/**
 
 # vscode settings and formatter files #
 ######################

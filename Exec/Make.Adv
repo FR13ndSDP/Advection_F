@@ -1,5 +1,5 @@
 AMREX_HOME ?= ../../../../../amrex
-TOP := /thfs1/home/opencfd/songdp/Advection_F2
+TOP := /home/sdp/Advection_F
 
 include $(AMREX_HOME)/Tools/GNUMake/Make.defs
 
