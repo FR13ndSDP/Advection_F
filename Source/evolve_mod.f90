@@ -1,5 +1,3 @@
-#include <AMReX_SPACE.H>
-
 module evolve_module
   use amrex_amr_module
   use amrex_fort_module
@@ -19,6 +17,7 @@ contains
     real(amrex_real) :: cur_time
     integer :: last_plot_file_step, step, lev, substep, finest_level
 
+    ! current time at level 0, as the global time
     cur_time = t_new(0)
     last_plot_file_step = 0; 
     do step = stepno(0), max_step - 1
@@ -32,13 +31,14 @@ contains
 
       lev = 0
       substep = 1
-      ! do time advance
+      ! do time advance recursively, start with level 0
       call timestep(lev, cur_time, substep)
 
       cur_time = cur_time + dt(0)
 
       if (amrex_parallel_ioprocessor()) then
-        print *, "STEP", step + 1, "end. TIME = ", cur_time, "DT = ", dt(0)
+        print *, "STEP", step + 1, "end."
+        print *, "TIME = ", cur_time, "DT = ", dt(0)
       end if
 
       ! sync up time to avoid roundoff errors
@@ -64,12 +64,12 @@ contains
     use my_amr_module, only: regrid_int, stepno, nsubsteps, dt, do_reflux
     use amr_data_module, only: t_old, t_new, phi_old, phi_new, flux_reg
     use averagedown_module, only: averagedownto
+    ! start with lev = 0, substep = 1
     integer, intent(in) :: lev, substep
     real(amrex_real), intent(in) :: time
 
     integer, allocatable, save :: last_regrid_step(:)
     integer :: k, old_finest_level, finest_level, fine_substep
-    integer :: redistribute_ngrow
 
     if (regrid_int > 0) then
       if (.not. allocated(last_regrid_step)) then
@@ -101,6 +101,15 @@ contains
 
     call advance(lev, time, dt(lev), stepno(lev), substep)
 
+    ! call timestep recursively
+    ! Ends like this:
+    !
+    ! |----|----|----|----| LEV 2
+    !           R         R
+    ! |---------|---------| LEV 1
+    !                     R
+    ! |-------------------| LEV 0
+    ! R stands for reflux between levels
     if (lev < amrex_get_finest_level()) then
       do fine_substep = 1, nsubsteps(lev + 1)
         call timestep(lev + 1, time + (fine_substep - 1)*dt(lev + 1), fine_substep)
@@ -111,14 +120,6 @@ contains
       end if
 
       call averagedownto(lev)
-    end if
-
-    if (substep < nsubsteps(lev) .or. lev == 0) then
-      if (lev == 0) then
-        redistribute_ngrow = 0
-      else
-        redistribute_ngrow = substep
-      end if
     end if
   end subroutine timestep
 
@@ -151,6 +152,7 @@ contains
 
     if (do_reflux) then
       do idim = 1, amrex_spacedim
+        ! to get face based flux
         nodal = .false.
         nodal(idim) = .true.
         call amrex_multifab_build(fluxes(idim), phi_new(lev)%ba, phi_new(lev)%dm, ncomp, 0, nodal=nodal)

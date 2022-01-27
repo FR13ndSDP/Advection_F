@@ -21,6 +21,7 @@ contains
     real(amrex_real) :: x, y
     real(amrex_real), pointer, contiguous :: psi(:, :)
     real(amrex_real), parameter :: M_PI = 3.1415926536
+    real(amrex_real), parameter :: I_M_PI = 1.d0/M_PI
     real(amrex_real) :: qtrdx(2)
     qtrdx = 0.25d0/dx
 
@@ -36,21 +37,21 @@ contains
       do i = plo(1), phi(1)
         x = (dble(i) + 0.5d0)*dx(1) + prob_lo(1)
         ! streamfunction psi
-        psi(i, j) = sin(M_PI*x)**2*sin(M_PI*y)**2*cos(M_PI*time/2.d0)*(1.d0/M_PI)
+        psi(i, j) = sin(M_PI*x)**2*sin(M_PI*y)**2*cos(M_PI*time/2.d0)*I_M_PI
       end do
     end do
 
     do j = vxlo(2), vxhi(2)
       do i = vxlo(1), vxhi(1)
         ! x velocity
-        vx(i, j) = -((psi(i, j + 1) + psi(i - 1, j + 1)) - (psi(i, j - 1) + psi(i - 1, j - 1))) * qtrdx(2)
+        vx(i, j) = -((psi(i, j + 1) + psi(i - 1, j + 1)) - (psi(i, j - 1) + psi(i - 1, j - 1)))*qtrdx(2)
       end do
     end do
 
     do j = vylo(2), vyhi(2)
       do i = vylo(1), vyhi(1)
         ! y velocity
-        vy(i, j) = ((psi(i + 1, j) + psi(i + 1, j - 1)) - (psi(i - 1, j) + psi(i - 1, j - 1))) * qtrdx(1)
+        vy(i, j) = ((psi(i + 1, j) + psi(i + 1, j - 1)) - (psi(i - 1, j) + psi(i - 1, j - 1)))*qtrdx(1)
       end do
     end do
 
