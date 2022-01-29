@@ -8,7 +8,7 @@ module slope_module
 
   private
 
-  public :: slopex, slopey, slopey4
+  public :: slopex, slopey
 contains
 
 ! seems to be 4th order upwind scheme
@@ -114,36 +114,4 @@ contains
     end do
 
   end subroutine slopey_doit
-
-  subroutine slopey4(lo, hi, &
-                     q, qlo, qhi, &
-                     dq, dqlo, dqhi)
-    integer, intent(in) :: lo(2), hi(2), qlo(2), qhi(2), dqlo(2), dqhi(2)
-    real(rt), intent(in) :: q(qlo(1):qhi(1), qlo(2):qhi(2))
-    real(rt), intent(out) :: dq(dqlo(1):dqhi(1), dqlo(2):dqhi(2))
-
-    integer :: i, j
-    real(rt), dimension(lo(2) - 1:hi(2) + 1) :: dsgn, dlim, df, dcen
-    real(rt) :: dlft, drgt, dq1
-
-    do i = lo(1), hi(1)
-      do j = lo(2) - 1, hi(2) + 1
-        dlft = q(i, j) - q(i, j - 1)
-        drgt = q(i, j + 1) - q(i, j)
-        dcen(j) = .5d0*(dlft + drgt)
-        dsgn(j) = sign(1.d0, dcen(i))
-        if (dlft*drgt .ge. 0.d0) then
-          dlim(j) = 2.d0*min(abs(dlft), abs(drgt))
-        else
-          dlim(j) = 0.d0
-        end if
-        df(j) = dsgn(j)*min(dlim(j), abs(dcen(j)))
-      end do
-    end do
-
-    do j = lo(2), hi(2)
-      dq1 = four3rd*dcen(j) - sixth*(df(j + 1) + df(j - 1))
-      dq(i, j) = dsgn(j)*min(dlim(j), abs(dq1))
-    end do
-  end subroutine slopey4
 end module slope_module

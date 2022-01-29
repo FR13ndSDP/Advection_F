@@ -20,6 +20,8 @@ module my_amr_module
   real(rt) :: cfl = 0.5_rt
   !
   character(len=:), allocatable, save :: plot_file
+  ! tagger type
+  character(len=:), allocatable, save :: tagger
   ! step number and number of substeps in each level
   integer, allocatable, save :: stepno(:)
   integer, allocatable, save :: nsubsteps(:)
@@ -48,6 +50,9 @@ contains
     allocate (character(len=3)::plot_file)
     plot_file = "plt"
 
+    allocate (character(len=3)::tagger)
+    tagger = "phi"
+
     ! Read parameters
     call amrex_parmparse_build(pp)
     call pp%query("max_step", max_step)
@@ -67,8 +72,10 @@ contains
     call pp%query("verbose", verbose)
     call pp%query("cfl", cfl)
     call pp%query("do_reflux", do_reflux)
+    call pp%query("tagger", tagger)
     call amrex_parmparse_destroy(pp)
 
+    ! BC can be periodic or use first order extraplation
     if (.not. amrex_is_all_periodic()) then
       lo_bc = amrex_bc_foextrap
       hi_bc = amrex_bc_foextrap
@@ -141,7 +148,7 @@ contains
       ! point to phi_new data
       phi => phi_new(lev)%dataptr(mfi)
       call init_prob_data(bx%lo, bx%hi, phi, &
-                          lbound(phi), ubound(phi), amrex_geom(lev)%dx, amrex_problo)
+                          lbound(phi), ubound(phi), amrex_geom(lev)%dx, amrex_problo, amrex_probhi)
     end do
 
     call amrex_mfiter_destroy(mfi)
@@ -167,7 +174,8 @@ contains
     call amrex_multifab_build(phi_new(lev), ba, dm, ncomp, nghost)
     call amrex_multifab_build(phi_old(lev), ba, dm, ncomp, nghost)
     if (lev > 0 .and. do_reflux) then
-      call amrex_fluxregister_build(flux_reg(lev), ba, dm, amrex_ref_ratio(lev - 1), lev, ncomp)
+      call amrex_fluxregister_build(flux_reg(lev), ba, dm, &
+                                    amrex_ref_ratio(lev - 1), lev, ncomp)
     end if
 
     call fillcoarsepatch(lev, time, phi_new(lev))
@@ -197,7 +205,8 @@ contains
     call amrex_multifab_build(phi_new(lev), ba, dm, ncomp, nghost)
     call amrex_multifab_build(phi_old(lev), ba, dm, ncomp, nghost)
     if (lev > 0 .and. do_reflux) then
-      call amrex_fluxregister_build(flux_reg(lev), ba, dm, amrex_ref_ratio(lev - 1), lev, ncomp)
+      call amrex_fluxregister_build(flux_reg(lev), ba, dm, &
+                                    amrex_ref_ratio(lev - 1), lev, ncomp)
     end if
 
     call phi_new(lev)%copy(new_phi_new, 1, 1, ncomp, nghost)
@@ -206,7 +215,7 @@ contains
   end subroutine my_remake_level
 
   subroutine my_error_estimate(lev, cp, t, settag, cleartag) bind(c)
-    use tagging_module, only: tag_phi_error
+    use tagging_module, only: tag_phi_error, tag_phi_grad
     integer(c_int), intent(in), value :: lev
     type(c_ptr), intent(in), value :: cp
     real(rt), intent(in), value :: t
@@ -234,10 +243,20 @@ contains
       bx = mfi%tilebox()
       phiarr => phi_new(lev)%dataPtr(mfi)
       tagarr => tag%dataPtr(mfi)
-      call tag_phi_error(bx%lo, bx%hi, &
-                         phiarr, lbound(phiarr), ubound(phiarr), &
-                         tagarr, lbound(tagarr), ubound(tagarr), &
-                         phierr(lev + 1), settag, cleartag)
+      if (tagger .eq. "phi") then
+        call tag_phi_error(bx%lo, bx%hi, &
+                           phiarr, lbound(phiarr), ubound(phiarr), &
+                           tagarr, lbound(tagarr), ubound(tagarr), &
+                           phierr(lev + 1), settag, cleartag)
+      else if (tagger .eq. "grad") then
+        call tag_phi_grad(bx%lo, bx%hi, &
+                           phiarr, lbound(phiarr), ubound(phiarr), &
+                           tagarr, lbound(tagarr), ubound(tagarr), &
+                           phierr(lev + 1), settag, cleartag)
+      else
+        call amrex_abort("Unkown tagger type")
+      end if
+
     end do
     call amrex_mfiter_destroy(mfi)
     !$omp end parallel
