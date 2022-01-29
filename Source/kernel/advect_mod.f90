@@ -1,4 +1,5 @@
 module advect_module
+  use iso_fortran_env, only : stderr => error_unit
   use amrex_base_module
   implicit none
   private
@@ -48,7 +49,7 @@ contains
     umax = maxval(vx)
     vmax = maxval(vy)
     if (umax*dt >= dx(1) .or. vmax*dt >= dx(2)) then
-      print *, "umax = ", umax, ", vmax = ", vmax, ", dt = ", dt, ", dx = ", dx
+      write(stderr, *) "umax = ", umax, ", vmax = ", vmax, ", dt = ", dt, ", dx = ", dx
       call amrex_error("CFL violation")
     end if
 
