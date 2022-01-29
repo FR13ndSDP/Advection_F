@@ -1,4 +1,5 @@
 module evolve_module
+  use iso_fortran_env, only: stdout => output_unit
   use amrex_amr_module
   use amrex_fort_module
   implicit none
@@ -10,12 +11,13 @@ contains
 
   subroutine evolve()
     use my_amr_module, only: stepno, max_step, stop_time, dt, plot_int
-    use amr_data_module, only: t_new
+    use amr_data_module, only: t_new, phi_new
     use compute_dt_module, only: compute_dt
     use plotfile_module, only: write_plotfile
 
     real(amrex_real) :: cur_time
     integer :: last_plot_file_step, step, lev, substep, finest_level
+    real(amrex_real) :: sum_phi
 
     ! current time at level 0, as the global time
     cur_time = t_new(0)
@@ -23,8 +25,8 @@ contains
     do step = stepno(0), max_step - 1
       if (cur_time >= stop_time) exit
       if (amrex_parallel_ioprocessor()) then
-        print *, ""
-        print *, "STEP", step + 1, "starts ..."
+        write(stdout, *) ""
+        write(stdout, *) "STEP", step + 1, "starts ..."
       end if
 
       call compute_dt()
@@ -34,11 +36,14 @@ contains
       ! do time advance recursively, start with level 0
       call timestep(lev, cur_time, substep)
 
+      ! sum phi to check conservation
+      sum_phi = phi_new(0)%sum()
+
       cur_time = cur_time + dt(0)
 
       if (amrex_parallel_ioprocessor()) then
-        print *, "STEP", step + 1, "end."
-        print *, "TIME = ", cur_time, "DT = ", dt(0)
+        write(stdout, *) "STEP", step + 1, "end."
+        write(stdout, '(A F7.3, 2X, A, ES10.3, 2X, A, F10.3)') "TIME = ", cur_time, "DT = ", dt(0), "Sum(Phi) = ", sum_phi
       end if
 
       ! sync up time to avoid roundoff errors
@@ -61,7 +66,7 @@ contains
   end subroutine evolve
 
   recursive subroutine timestep(lev, time, substep)
-    use my_amr_module, only: regrid_int, stepno, nsubsteps, dt, do_reflux
+    use my_amr_module, only: verbose, regrid_int, stepno, nsubsteps, dt, do_reflux
     use amr_data_module, only: t_old, t_new, phi_old, phi_new, flux_reg
     use averagedown_module, only: averagedownto
     ! start with lev = 0, substep = 1
@@ -115,8 +120,13 @@ contains
         call timestep(lev + 1, time + (fine_substep - 1)*dt(lev + 1), fine_substep)
       end do
 
+      ! sync up flux
       if (do_reflux) then
         call flux_reg(lev + 1)%reflux(phi_new(lev), 1.0_amrex_real)
+        if (verbose > 0) then
+          write (stdout, '(2(A I0), A)') &
+            "Done Reflux between [", lev, "] and [", lev + 1, "]."
+        end if
       end if
 
       call averagedownto(lev)
@@ -144,7 +154,7 @@ contains
     type(amrex_multifab) :: fluxes(amrex_spacedim)
 
     if (verbose > 0 .and. amrex_parallel_ioprocessor()) then
-      write (*, '(A, 1X, I0, 1X, A, 1X, I0, A, 1X, G0)') &
+      write (stdout, '(A, 1X, I0, 1X, A, 1X, I0, A, 1X, ES10.3)') &
         "[Level", lev, "step", step, "] ADVANCE with dt =", dt
     end if
 
