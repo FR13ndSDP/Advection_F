@@ -2,7 +2,7 @@ max_step  = 1000
 stop_time = 2.0
 
 # PROBLEM TYPE
-prob.test_case = 1
+prob.test_case = 0
 
 # PROBLEM SIZE & GEOMETRY
 geometry.is_periodic =  1 1
@@ -14,7 +14,7 @@ amr.n_cell           =  64   64
 amr.v              = 1       # verbosity in Amr
 
 # REFINEMENT
-amr.max_level       = 2       # maximum level number allowed
+amr.max_level       = 3       # maximum level number allowed
 amr.ref_ratio       = 2 2 2 2 # refinement ratio
 amr.blocking_factor = 8       # block factor in grid generation
 amr.max_grid_size   = 16
@@ -30,5 +30,5 @@ myamr.cfl       = 0.7
 myamr.do_reflux = 1
 
 # Tagging
-myamr.tagger = phi
-myamr.phierr    = 1.01 1.1
+myamr.tagger = grad
+myamr.phierr    = 3 6 8
