@@ -249,7 +249,7 @@ contains
                            tagarr, lbound(tagarr), ubound(tagarr), &
                            phierr(lev + 1), settag, cleartag)
       else if (tagger .eq. "grad") then
-        call tag_phi_grad(bx%lo, bx%hi, &
+        call tag_phi_grad(amrex_geom(lev)%dx, bx%lo, bx%hi, &
                            phiarr, lbound(phiarr), ubound(phiarr), &
                            tagarr, lbound(tagarr), ubound(tagarr), &
                            phierr(lev + 1), settag, cleartag)
