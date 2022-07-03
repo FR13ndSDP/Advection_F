@@ -76,10 +76,10 @@ contains
     call amrex_parmparse_destroy(pp)
 
     ! BC can be periodic or use first order extraplation
-    if (.not. amrex_is_all_periodic()) then
-      lo_bc = amrex_bc_foextrap
-      hi_bc = amrex_bc_foextrap
-    end if
+    ! if (.not. amrex_is_all_periodic()) then
+    !   lo_bc = amrex_bc_foextrap
+    !   hi_bc = amrex_bc_foextrap
+    ! end if
 
     allocate (stepno(0:amrex_max_level))
     stepno = 0

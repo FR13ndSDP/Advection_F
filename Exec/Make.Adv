@@ -1,5 +1,6 @@
 AMREX_HOME ?= ../../../../../amrex
-TOP := /home/sdp/Advection_F
+# TOP should be changed to your path
+TOP := /home/sdp/AMR/Advection_F
 
 include $(AMREX_HOME)/Tools/GNUMake/Make.defs
 

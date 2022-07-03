@@ -30,10 +30,11 @@
 # Building generated files #
 ######################
 Source/modfiles/**
-Exec/tmp_build_dir/**
+**/tmp_build_dir/**
 Exec/plt*
 
 # vscode settings and formatter files #
 ######################
 **/.fortls
 **/.vscode/**
+**/__pycache__/**
